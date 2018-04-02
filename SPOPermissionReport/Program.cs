@@ -45,6 +45,7 @@ namespace SPOPermissionReport
             #region READ_SETTINGS
             string adminSiteUrl = ConfigurationManager.AppSettings["adminsite"];
             adminUser = ConfigurationManager.AppSettings["adminuser"];
+            string adminPassword = ConfigurationManager.AppSettings["adminPassword"];
             filePath = ConfigurationManager.AppSettings["csvfilepath"];
             odbUrlsCsvFile = ConfigurationManager.AppSettings["odbUrlsCsvFile"];
             removeUsersLogFilePath = ConfigurationManager.AppSettings["csvremoveusersfiletolog"];
@@ -58,7 +59,7 @@ namespace SPOPermissionReport
             string sitesScope = ConfigurationManager.AppSettings["sitesScope"];
             string mySiteHost = ConfigurationManager.AppSettings["mySiteHost"]; 
             string adminMySiteUrl = ConfigurationManager.AppSettings["AdminODBUrl"];
-
+            
             var pwdtxt = "**********";
             Console.WriteLine("---------------------------------------");
             Console.WriteLine("Environment details provided\n");
@@ -96,49 +97,51 @@ namespace SPOPermissionReport
             #endregion READ_SETTINGS
 
             #region Get password securely
-
-            pwdtxt = string.Empty;
-            Console.WriteLine("\nEnter your password for the admin account: ");
-            ConsoleKeyInfo key;
-
-            do
+            if (string.IsNullOrEmpty(adminPassword))
             {
-                key = Console.ReadKey(true);
+                pwdtxt = string.Empty;
+                Console.WriteLine("\nEnter your password for the admin account: ");
+                ConsoleKeyInfo key;
 
-                if (key.Key != ConsoleKey.Backspace && key.Key != ConsoleKey.Enter)
+                do
                 {
-                    pwdtxt += key.KeyChar;
-                    Console.Write("*");
-                }
-                else
-                {
-                    if (key.Key == ConsoleKey.Backspace && pwdtxt.Length > 0)
+                    key = Console.ReadKey(true);
+
+                    if (key.Key != ConsoleKey.Backspace && key.Key != ConsoleKey.Enter)
                     {
-                        pwdtxt = pwdtxt.Substring(0, (pwdtxt.Length - 1));
-                        Console.Write("\b \b");
+                        pwdtxt += key.KeyChar;
+                        Console.Write("*");
+                    }
+                    else
+                    {
+                        if (key.Key == ConsoleKey.Backspace && pwdtxt.Length > 0)
+                        {
+                            pwdtxt = pwdtxt.Substring(0, (pwdtxt.Length - 1));
+                            Console.Write("\b \b");
+                        }
                     }
                 }
-            }
-            // Stops Receving Keys Once Enter is Pressed
-            while (key.Key != ConsoleKey.Enter);
+                // Stops Receving Keys Once Enter is Pressed
+                while (key.Key != ConsoleKey.Enter);
 
-            Console.WriteLine();
-            //Console.WriteLine("The Password You entered is : " + pwdtxt);
+                Console.WriteLine();
+                //Console.WriteLine("The Password You entered is : " + pwdtxt);
+                if (pwdtxt.Trim().Length == 0)
+                {
+                    Console.WriteLine("Password is empty. Please try again. Press enter to close.");
+                    return;
+                }
+            }
+            else
+                pwdtxt = adminPassword;
             
-
-            //pwdtxt = "4851@svarukal";
-            if(pwdtxt.Trim().Length == 0)
-            {
-                Console.WriteLine("Password is empty. Please try again. Press enter to close.");
-                return;
-            }
             SecureString pwd = new SecureString();
             foreach (char c in pwdtxt.ToCharArray())
                 pwd.AppendChar(c);
             #endregion
 
             #region COMMENTED_TestODBSitesProcess
-            Console.Write("Enter 'y' to write all ODB urls to csv file? [y/n] ");
+            Console.WriteLine("Enter 'y' to write all ODB urls to csv file? [y/n] ");
             ConsoleKey g = Console.ReadKey(false).Key;
             if (g == ConsoleKey.Y)
             {
@@ -231,9 +234,11 @@ namespace SPOPermissionReport
                 {
                     if (siteurl.Contains(mySiteHost))
                     {
-                        AddRemoveODBSiteAdmin(siteurl, true, adminCtx);
-                        BeginProcessWeb(siteurl, creds);
-                        AddRemoveODBSiteAdmin(siteurl, false, adminCtx);
+                        if (AddRemoveODBSiteAdmin(siteurl, true, adminCtx))
+                        {
+                            BeginProcessWeb(siteurl, creds);
+                            AddRemoveODBSiteAdmin(siteurl, false, adminCtx);
+                        }
                     }
                     else
                         BeginProcessWeb(siteurl, creds);
@@ -293,9 +298,11 @@ namespace SPOPermissionReport
                                 try
                                 {
                                     personalUrl = u.Values[0].Value as string;
-                                    AddRemoveODBSiteAdmin(mySiteHost + personalUrl, true, adminCtx);
-                                    BeginProcessWeb(mySiteHost + personalUrl, creds);
-                                    AddRemoveODBSiteAdmin(mySiteHost + personalUrl, false, adminCtx);
+                                    if (AddRemoveODBSiteAdmin(mySiteHost + personalUrl, true, adminCtx))
+                                    {
+                                        BeginProcessWeb(mySiteHost + personalUrl, creds);
+                                        AddRemoveODBSiteAdmin(mySiteHost + personalUrl, false, adminCtx);
+                                    }
                                     break;
                                 }
                                 catch(Exception odbErr)
@@ -390,20 +397,31 @@ namespace SPOPermissionReport
 
 
         public static string adminLoginName = null;
-        public static void AddRemoveODBSiteAdmin(string odbUrl, bool add, ClientContext adminCtx)
+        public static bool AddRemoveODBSiteAdmin(string odbUrl, bool add, ClientContext adminCtx)
         {
-            if (odbUrl.IndexOf(ConfigurationManager.AppSettings["AdminODBUrl"].ToString(), StringComparison.CurrentCultureIgnoreCase) >= 0)
-                return;
-            var tenant = new Tenant(adminCtx);
-            if (string.IsNullOrEmpty(adminLoginName))
-            { 
-                var currentUser = adminCtx.Web.CurrentUser;
-                adminCtx.Load(currentUser, u => u.LoginName);
+            try
+            {
+                if (odbUrl.IndexOf(ConfigurationManager.AppSettings["AdminODBUrl"].ToString(), StringComparison.CurrentCultureIgnoreCase) >= 0)
+                    return true;
+                var tenant = new Tenant(adminCtx);
+                if (string.IsNullOrEmpty(adminLoginName))
+                {
+                    var currentUser = adminCtx.Web.CurrentUser;
+                    adminCtx.Load(currentUser, u => u.LoginName);
+                    adminCtx.ExecuteQuery();
+                    adminLoginName = currentUser.LoginName;
+                }
+                tenant.SetSiteAdmin(odbUrl, adminLoginName, add);
                 adminCtx.ExecuteQuery();
-                adminLoginName = currentUser.LoginName;
             }
-            tenant.SetSiteAdmin(odbUrl, adminLoginName, add);
-            adminCtx.ExecuteQuery();
+            catch(Exception err)
+            {
+                var txt = string.Format("{0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}{9}", "n/a", odbUrl, "n/a", "n/a", "n/a", "n/a", "n/a", "ERROR on action: "+ (add? "add" : "remove"), "ERROR: " + SanitizeForCSV(err.ToString()), Environment.NewLine);
+                System.IO.File.AppendAllText(removeUsersLogFilePath, txt, ASCIIEncoding.ASCII);
+                if (add)
+                    return false;
+            }
+            return true;
             #region Commented
             /*
             using (var context = new ClientContext(odbUrl))
