@@ -23,7 +23,6 @@ using System.IO;
 using System.Configuration;
 using Microsoft.Online.SharePoint.TenantAdministration;
 using System.Net;
-using OfficeDevPnP.Core.Entities;
 using Microsoft.SharePoint.Client.UserProfiles;
 using Microsoft.SharePoint.Client.Search.Query;
 
@@ -40,12 +39,14 @@ namespace SPOPermissionReport
         public static List<int> siteGroupIDs;
         public static bool skipLists = false;
         public static bool skipListItems = false;
+        public static string odbUrlsCsvFile;
         static void Main(string[] args)
         {
             #region READ_SETTINGS
             string adminSiteUrl = ConfigurationManager.AppSettings["adminsite"];
             adminUser = ConfigurationManager.AppSettings["adminuser"];
             filePath = ConfigurationManager.AppSettings["csvfilepath"];
+            odbUrlsCsvFile = ConfigurationManager.AppSettings["odbUrlsCsvFile"];
             removeUsersLogFilePath = ConfigurationManager.AppSettings["csvremoveusersfiletolog"];
             filterUsers = ConfigurationManager.AppSettings["filterusers"].Split(',');
             ignoreLists = ConfigurationManager.AppSettings["excludelists"].Split(',');
@@ -58,12 +59,6 @@ namespace SPOPermissionReport
             string mySiteHost = ConfigurationManager.AppSettings["mySiteHost"]; 
             string adminMySiteUrl = ConfigurationManager.AppSettings["AdminODBUrl"];
 
-            //string filePath = @"C:\temp\notes.csv";
-            string txt = string.Format("{0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}{9}", "Site Title", "Site URL", "List Title", "Path", "ObjectType", "Principal Type", "Principal ID", "Permission Type", "Notes", Environment.NewLine);
-            if(removeFilteredUsers)
-                System.IO.File.AppendAllText(removeUsersLogFilePath, txt, ASCIIEncoding.ASCII);
-            else
-                System.IO.File.AppendAllText(filePath, txt, ASCIIEncoding.ASCII);
             var pwdtxt = "**********";
             Console.WriteLine("---------------------------------------");
             Console.WriteLine("Environment details provided\n");
@@ -89,6 +84,7 @@ namespace SPOPermissionReport
             Console.WriteLine("CSV Log File to log removed users:   {0}", removeUsersLogFilePath);
             }
             Console.WriteLine("---------------------------------------");
+
             Console.Write("Are you sure you want to proceed? [y/n] ");
             ConsoleKey k = Console.ReadKey(false).Key;
             if(k != ConsoleKey.Y)
@@ -130,7 +126,7 @@ namespace SPOPermissionReport
             //Console.WriteLine("The Password You entered is : " + pwdtxt);
             
 
-            pwdtxt = "4851@svarukal";
+            //pwdtxt = "4851@svarukal";
             if(pwdtxt.Trim().Length == 0)
             {
                 Console.WriteLine("Password is empty. Please try again. Press enter to close.");
@@ -142,11 +138,24 @@ namespace SPOPermissionReport
             #endregion
 
             #region COMMENTED_TestODBSitesProcess
-            /*
-            ClientContext adminCtx1 = new ClientContext(adminSiteUrl);
-            SharePointOnlineCredentials creds1 = new SharePointOnlineCredentials(adminUser, pwd);
-            adminCtx1.Credentials = creds1;
+            Console.Write("Enter 'y' to write all ODB urls to csv file? [y/n] ");
+            ConsoleKey g = Console.ReadKey(false).Key;
+            if (g == ConsoleKey.Y)
+            {
+                using (ClientContext adminCtx1 = new ClientContext(adminSiteUrl))
+                {
+                    SharePointOnlineCredentials creds1 = new SharePointOnlineCredentials(adminUser, pwd);
+                    adminCtx1.Credentials = creds1;
+                    GetUsersODBSites(adminCtx1);
+                    Console.WriteLine("ODB Site Urls written to file: {0}\n Hit enter to close", odbUrlsCsvFile);
+                    Console.Read();
+                    return;
+                }
+            }
+            else
+                Console.WriteLine("\nMoving on...");
 
+            /*
             List<string> users = GetUserAccountNames(adminCtx1);
             foreach (var user in users)
             {
@@ -187,7 +196,16 @@ namespace SPOPermissionReport
             */
             #endregion
 
+
+            //string filePath = @"C:\temp\notes.csv";
+            string txt = string.Format("{0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}{9}", "Site Title", "Site URL", "List Title", "Path", "ObjectType", "Principal Type", "Principal ID", "Permission Type", "Notes", Environment.NewLine);
+            if (removeFilteredUsers)
+                System.IO.File.AppendAllText(removeUsersLogFilePath, txt, ASCIIEncoding.ASCII);
+            else
+                System.IO.File.AppendAllText(filePath, txt, ASCIIEncoding.ASCII);
             SharePointOnlineCredentials creds = new SharePointOnlineCredentials(adminUser, pwd);
+            ClientContext adminCtx = new ClientContext(adminSiteUrl);
+            adminCtx.Credentials = creds;
             if (useCSVAsInput)
             {
                 #region ReadCSVInput
@@ -211,15 +229,20 @@ namespace SPOPermissionReport
                 }
                 foreach (string siteurl in sitesList)
                 {
-                    BeginProcessWeb(siteurl, creds);
+                    if (siteurl.Contains(mySiteHost))
+                    {
+                        AddRemoveODBSiteAdmin(siteurl, true, adminCtx);
+                        BeginProcessWeb(siteurl, creds);
+                        AddRemoveODBSiteAdmin(siteurl, false, adminCtx);
+                    }
+                    else
+                        BeginProcessWeb(siteurl, creds);
                 }
                 #endregion
             }
             else
             {
                 #region READ_USING_API
-                ClientContext adminCtx = new ClientContext(adminSiteUrl);
-                adminCtx.Credentials = creds;
                 //SharePointOnlineCredentials creds = new SharePointOnlineCredentials(adminUser, pwd);
                 if (sitesScope.Equals("All") || sitesScope.Equals("SPO"))
                 {
@@ -248,7 +271,7 @@ namespace SPOPermissionReport
                     //ClientContext adminCtx1 = new ClientContext(adminSiteUrl);
                     //SharePointOnlineCredentials creds1 = new SharePointOnlineCredentials(adminUser, pwd);
                     UserProfileService userProfileSvc = new UserProfileService();
-                    PeopleManager pplMgr = new PeopleManager(adminCtx);
+                    //PeopleManager pplMgr = new PeopleManager(adminCtx);
 
                     userProfileSvc.Url = adminSiteUrl + "/_vti_bin/UserProfileService.asmx";
                     userProfileSvc.UseDefaultCredentials = false;
@@ -286,10 +309,10 @@ namespace SPOPermissionReport
                     }
                     #endregion
                 }
-                adminCtx.Dispose();
+                
                 #endregion
             }
-
+            adminCtx.Dispose();
             Console.WriteLine("Finished processing all site collections.");
             Console.ReadLine();
             Console.Write("Are you sure you want to close it? [y/n] ");
@@ -327,9 +350,44 @@ namespace SPOPermissionReport
                 }
 
             }
-
             return accountNames;
         }
+        private static void GetUsersODBSites(ClientContext clientContext)
+        {
+            Console.WriteLine("\nGetting user profiles...\n");
+            //Use search to get the AccountNames of users in a tenant. 
+            var keywordQuery = new KeywordQuery(clientContext);
+            keywordQuery.QueryText = "*";
+            keywordQuery.SourceId = new Guid("b09a7990-05ea-4af9-81ef-edfab16c4e31");
+            keywordQuery.SelectProperties.Add("AccountName");
+            keywordQuery.BypassResultTypes = true;
+            var searchExecutor = new SearchExecutor(clientContext);
+            var searchResults = searchExecutor.ExecuteQuery(keywordQuery);
+            clientContext.ExecuteQuery();
+            var accountNames = new List<string>();
+            Console.WriteLine("Found {0} user profiles.\n", searchResults.Value[0].RowCount);
+            if (searchResults.Value.Count > 0 && searchResults.Value[0].RowCount > 0)
+            {
+                PeopleManager peopleManager = new PeopleManager(clientContext);
+                var odbSiteUrl = ConfigurationManager.AppSettings["mySiteHost"];
+                foreach (var resultRow in searchResults.Value[0].ResultRows)
+                {
+                    accountNames.Add(resultRow["AccountName"].ToString());
+                    var odbObj = peopleManager.GetUserProfilePropertyFor(resultRow["AccountName"].ToString(), "PersonalSpace");
+                    clientContext.ExecuteQuery();
+                    if (!string.IsNullOrEmpty(odbObj.Value))
+                    {
+                        Console.WriteLine(odbSiteUrl + odbObj.Value);
+                        System.IO.File.AppendAllText(odbUrlsCsvFile, odbSiteUrl + odbObj.Value + Environment.NewLine, ASCIIEncoding.ASCII);
+                    }
+                    else
+                        Console.WriteLine("..");
+                }
+            }
+
+            //return accountNames;
+        }
+
 
         public static string adminLoginName = null;
         public static void AddRemoveODBSiteAdmin(string odbUrl, bool add, ClientContext adminCtx)
