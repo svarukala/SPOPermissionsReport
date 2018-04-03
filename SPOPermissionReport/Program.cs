@@ -141,7 +141,7 @@ namespace SPOPermissionReport
             #endregion
 
             #region COMMENTED_TestODBSitesProcess
-            Console.WriteLine("Enter 'y' to write all ODB urls to csv file? [y/n] ");
+            Console.WriteLine("\nEnter 'y' to write all ODB urls to csv file? [y/n] ");
             ConsoleKey g = Console.ReadKey(false).Key;
             if (g == ConsoleKey.Y)
             {
@@ -251,68 +251,82 @@ namespace SPOPermissionReport
                 //SharePointOnlineCredentials creds = new SharePointOnlineCredentials(adminUser, pwd);
                 if (sitesScope.Equals("All") || sitesScope.Equals("SPO"))
                 {
-                    Tenant tenant = new Tenant(adminCtx);
-                    int startIndex = 0;
-                    SPOSitePropertiesEnumerable allSites = null;
-
-                    while (allSites == null || allSites.Count > 0)
+                    try
                     {
-                        allSites = tenant.GetSiteProperties(startIndex, false);
-                        adminCtx.Load(allSites);
-                        adminCtx.ExecuteQuery();
-                        if (allSites != null && allSites.Count > 0)
+                        Tenant tenant = new Tenant(adminCtx);
+                        int startIndex = 0;
+                        SPOSitePropertiesEnumerable allSites = null;
+
+                        while (allSites == null || allSites.Count > 0)
                         {
-                            foreach (SiteProperties prop in allSites)
+                            allSites = tenant.GetSiteProperties(startIndex, false);
+                            adminCtx.Load(allSites);
+                            adminCtx.ExecuteQuery();
+                            if (allSites != null && allSites.Count > 0)
                             {
-                                BeginProcessWeb(prop.Url, creds);
+                                foreach (SiteProperties prop in allSites)
+                                {
+                                    BeginProcessWeb(prop.Url, creds);
+                                }
+                                startIndex += allSites.Count;
                             }
-                            startIndex += allSites.Count;
                         }
+                    }
+                    catch(Exception errAllSPO)
+                    {
+                        Console.WriteLine("Error while processing ALLorSPO sites. Error details: {0}", errAllSPO.ToString());
                     }
                 }
                 if (sitesScope.Equals("All") || sitesScope.Equals("ODB"))
                 {
                     #region Process SPO and ODB
-                    //ClientContext adminCtx1 = new ClientContext(adminSiteUrl);
-                    //SharePointOnlineCredentials creds1 = new SharePointOnlineCredentials(adminUser, pwd);
-                    UserProfileService userProfileSvc = new UserProfileService();
-                    //PeopleManager pplMgr = new PeopleManager(adminCtx);
+                    try
+                    { 
+                        //ClientContext adminCtx1 = new ClientContext(adminSiteUrl);
+                        //SharePointOnlineCredentials creds1 = new SharePointOnlineCredentials(adminUser, pwd);
+                        UserProfileService userProfileSvc = new UserProfileService();
+                        //PeopleManager pplMgr = new PeopleManager(adminCtx);
 
-                    userProfileSvc.Url = adminSiteUrl + "/_vti_bin/UserProfileService.asmx";
-                    userProfileSvc.UseDefaultCredentials = false;
-                    userProfileSvc.CookieContainer = new CookieContainer();
-                    string authCookie = creds.GetAuthenticationCookie(new Uri(adminSiteUrl));
-                    userProfileSvc.CookieContainer.SetCookies(new Uri(adminSiteUrl), authCookie);
-                    var userProfileResult = userProfileSvc.GetUserProfileByIndex(-1);
-                    long totalProfiles = userProfileSvc.GetUserProfileCount();
-                    Console.WriteLine("\nTotal user profiles: " + totalProfiles);
-                    string personalUrl = null;
-                    int nextIndex = -1;
-                    while (userProfileResult.NextValue != "-1")
-                    {
-                        foreach (var u in userProfileResult.UserProfile)
+                        userProfileSvc.Url = adminSiteUrl + "/_vti_bin/UserProfileService.asmx";
+                        userProfileSvc.UseDefaultCredentials = false;
+                        userProfileSvc.CookieContainer = new CookieContainer();
+                        string authCookie = creds.GetAuthenticationCookie(new Uri(adminSiteUrl));
+                        userProfileSvc.CookieContainer.SetCookies(new Uri(adminSiteUrl), authCookie);
+                        var userProfileResult = userProfileSvc.GetUserProfileByIndex(-1);
+                        long totalProfiles = userProfileSvc.GetUserProfileCount();
+                        Console.WriteLine("\nTotal user profiles: " + totalProfiles);
+                        string personalUrl = null;
+                        int nextIndex = -1;
+                        while (userProfileResult.NextValue != "-1")
                         {
-                            /* (PersonalSpace is the name of the path to a user's OneDrive for Business site. Users who have not yet created a OneDrive for Business site might not have this property set.)*/
-                            if (u.Values.Length != 0 && u.Values[0].Value != null && u.Name == "PersonalSpace")
+                            foreach (var u in userProfileResult.UserProfile)
                             {
-                                try
+                                /* (PersonalSpace is the name of the path to a user's OneDrive for Business site. Users who have not yet created a OneDrive for Business site might not have this property set.)*/
+                                if (u.Values.Length != 0 && u.Values[0].Value != null && u.Name == "PersonalSpace")
                                 {
-                                    personalUrl = u.Values[0].Value as string;
-                                    if (AddRemoveODBSiteAdmin(mySiteHost + personalUrl, true, adminCtx))
+                                    try
                                     {
-                                        BeginProcessWeb(mySiteHost + personalUrl, creds);
-                                        AddRemoveODBSiteAdmin(mySiteHost + personalUrl, false, adminCtx);
+                                        personalUrl = u.Values[0].Value as string;
+                                        if (AddRemoveODBSiteAdmin(mySiteHost + personalUrl, true, adminCtx))
+                                        {
+                                            BeginProcessWeb(mySiteHost + personalUrl, creds);
+                                            AddRemoveODBSiteAdmin(mySiteHost + personalUrl, false, adminCtx);
+                                        }
+                                        break;
                                     }
-                                    break;
-                                }
-                                catch(Exception odbErr)
-                                {
-                                    Console.WriteLine("Exception while add/remove of Site Admin to DDB site collection {0}. Error details: {1}", u.Values[0].Value as string, odbErr.ToString());
+                                    catch(Exception odbErr)
+                                    {
+                                        Console.WriteLine("Exception while add/remove of Site Admin to DDB site collection {0}. Error details: {1}", u.Values[0].Value as string, odbErr.ToString());
+                                    }
                                 }
                             }
+                            nextIndex = Int32.Parse(userProfileResult.NextValue);
+                            userProfileResult = userProfileSvc.GetUserProfileByIndex(nextIndex);
                         }
-                        nextIndex = Int32.Parse(userProfileResult.NextValue);
-                        userProfileResult = userProfileSvc.GetUserProfileByIndex(nextIndex);
+                    }
+                    catch (Exception errAllODB)
+                    {
+                        Console.WriteLine("Error while processing ALLorODB sites. Error details: {0}", errAllODB.ToString());
                     }
                     #endregion
                 }
