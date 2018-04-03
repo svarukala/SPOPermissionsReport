@@ -431,7 +431,7 @@ namespace SPOPermissionReport
             catch(Exception err)
             {
                 var txt = string.Format("{0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}{9}", "n/a", odbUrl, "n/a", "n/a", "n/a", "n/a", "n/a", "ERROR on action: "+ (add? "add" : "remove"), "ERROR: " + SanitizeForCSV(err.ToString()), Environment.NewLine);
-                System.IO.File.AppendAllText(removeUsersLogFilePath, txt, ASCIIEncoding.ASCII);
+                System.IO.File.AppendAllText(filePath, txt, ASCIIEncoding.ASCII);
                 if (add)
                     return false;
             }
