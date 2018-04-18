@@ -703,7 +703,7 @@ namespace SPOPermissionReport
                                     grp.Users.Remove(user);
                                     grp.Update();
                                     context.ExecuteQuery();
-                                    txt = string.Format("{0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}{9}", SanitizeForCSV(context.Web.Title), context.Web.Url, SanitizeForCSV(list.Title), item["FileRef"], item.FileSystemObjectType, roleAsg.Member.PrincipalType, user.LoginName, "", "User removed from group: " + roleAsg.Member.LoginName, Environment.NewLine);
+                                    txt = string.Format("{0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}{9}", SanitizeForCSV(context.Web.Title), context.Web.Url, "n/a", item["FileRef"], item.FileSystemObjectType, roleAsg.Member.PrincipalType, user.LoginName, "", "User removed from group: " + roleAsg.Member.LoginName, Environment.NewLine);
                                     System.IO.File.AppendAllText(removeUsersLogFilePath, txt, ASCIIEncoding.ASCII);
                                 }
                                 catch (Exception e2)
@@ -725,7 +725,7 @@ namespace SPOPermissionReport
                         roleAsg.RoleDefinitionBindings.RemoveAll();
                         roleAsg.DeleteObject();
                         context.ExecuteQuery();
-                        txt = string.Format("{0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}{9}", SanitizeForCSV(context.Web.Title), context.Web.Url, SanitizeForCSV(list.Title), item["FileRef"], item.FileSystemObjectType, roleAsg.Member.PrincipalType, ProcessLoginName(roleAsg.Member.LoginName), "", "User/Group removed", Environment.NewLine);
+                        txt = string.Format("{0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}{9}", SanitizeForCSV(context.Web.Title), context.Web.Url, "n/a", item["FileRef"], item.FileSystemObjectType, roleAsg.Member.PrincipalType, ProcessLoginName(roleAsg.Member.LoginName), "", "User/Group removed", Environment.NewLine);
                         System.IO.File.AppendAllText(removeUsersLogFilePath, txt, ASCIIEncoding.ASCII);
                     }
                 }
@@ -798,7 +798,7 @@ namespace SPOPermissionReport
                                     grp.Users.Remove(user);
                                     grp.Update();
                                     context.ExecuteQuery();
-                                    txt = string.Format("{0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}{9}", SanitizeForCSV(context.Web.Title), context.Web.Url, SanitizeForCSV(list.Title), list.RootFolder.ServerRelativeUrl, list.BaseType, roleAsg.Member.PrincipalType, user.LoginName, "", "User removed from group: " + roleAsg.Member.LoginName, Environment.NewLine);
+                                    txt = string.Format("{0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}{9}", SanitizeForCSV(context.Web.Title), context.Web.Url, "n/a", list.RootFolder.ServerRelativeUrl, list.BaseType, roleAsg.Member.PrincipalType, user.LoginName, "", "User removed from group: " + roleAsg.Member.LoginName, Environment.NewLine);
                                     System.IO.File.AppendAllText(removeUsersLogFilePath, txt, ASCIIEncoding.ASCII);
                                 }
                                 catch (Exception e2)
@@ -820,7 +820,7 @@ namespace SPOPermissionReport
                         roleAsg.RoleDefinitionBindings.RemoveAll();
                         roleAsg.DeleteObject();
                         context.ExecuteQuery();
-                        txt = string.Format("{0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}{9}", SanitizeForCSV(context.Web.Title), context.Web.Url, SanitizeForCSV(list.Title), list.RootFolder.ServerRelativeUrl, list.BaseType, roleAsg.Member.PrincipalType, ProcessLoginName(roleAsg.Member.LoginName), "", "User/Group removed", Environment.NewLine);
+                        txt = string.Format("{0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}{9}", SanitizeForCSV(context.Web.Title), context.Web.Url, "n/a", list.RootFolder.ServerRelativeUrl, list.BaseType, roleAsg.Member.PrincipalType, ProcessLoginName(roleAsg.Member.LoginName), "", "User/Group removed", Environment.NewLine);
                         System.IO.File.AppendAllText(removeUsersLogFilePath, txt, ASCIIEncoding.ASCII);
                     }
                 }
@@ -856,7 +856,7 @@ namespace SPOPermissionReport
                     }
                     else
                     {
-                        txt = string.Format("{0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}{9}", SanitizeForCSV(context.Web.Title), context.Web.Url, SanitizeForCSV(web.Title), "n/a", "Web", roleAsg.Member.PrincipalType, pId, string.Join("|", roles.ToArray()), "Granted directly", Environment.NewLine);
+                        txt = string.Format("{0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}{9}", SanitizeForCSV(context.Web.Title), context.Web.Url, "n/a", "n/a", "Web", roleAsg.Member.PrincipalType, pId, string.Join("|", roles.ToArray()), "Granted directly", Environment.NewLine);
                         System.IO.File.AppendAllText(filePath, txt, ASCIIEncoding.ASCII);
                     }
                 }
@@ -883,7 +883,7 @@ namespace SPOPermissionReport
                                 }
                                 else
                                 {
-                                    txt = string.Format("{0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}{9}", SanitizeForCSV(context.Web.Title), context.Web.Url, SanitizeForCSV(web.Title), "n/a", "Web", roleAsg.Member.PrincipalType, pId, string.Join("|", roles.ToArray()), "Granted  Through Group Membership. Group name:" + roleAsg.Member.LoginName, Environment.NewLine);
+                                    txt = string.Format("{0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}{9}", SanitizeForCSV(context.Web.Title), context.Web.Url, "n/a", "n/a", "Web", roleAsg.Member.PrincipalType, pId, string.Join("|", roles.ToArray()), "Granted  Through Group Membership. Group name:" + roleAsg.Member.LoginName, Environment.NewLine);
                                     System.IO.File.AppendAllText(filePath, txt, ASCIIEncoding.ASCII);
                                 }
 
@@ -899,7 +899,7 @@ namespace SPOPermissionReport
                                     grp.Users.Remove(user);
                                     grp.Update();
                                     context.ExecuteQuery();
-                                    txt = string.Format("{0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}{9}", SanitizeForCSV(context.Web.Title), context.Web.Url, "Removed user/group", "n/a", "Web", roleAsg.Member.PrincipalType, user.LoginName, "", "User removed from group: " + roleAsg.Member.LoginName, Environment.NewLine);
+                                    txt = string.Format("{0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}{9}", SanitizeForCSV(context.Web.Title), context.Web.Url, "n/a", "n/a", "Web", roleAsg.Member.PrincipalType, user.LoginName, "n/a", "User removed from group: " + roleAsg.Member.LoginName, Environment.NewLine);
                                     System.IO.File.AppendAllText(removeUsersLogFilePath, txt, ASCIIEncoding.ASCII);
                                 }
                                 catch (Exception e2)
@@ -922,7 +922,7 @@ namespace SPOPermissionReport
                         roleAsg.RoleDefinitionBindings.RemoveAll();
                         roleAsg.DeleteObject();
                         context.ExecuteQuery();
-                        txt = string.Format("{0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}{9}", SanitizeForCSV(context.Web.Title), context.Web.Url, "Removed user/group", "n/a", "Web", roleAsg.Member.PrincipalType, ProcessLoginName(roleAsg.Member.LoginName), "", "User/Group removed", Environment.NewLine);
+                        txt = string.Format("{0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}{9}", SanitizeForCSV(context.Web.Title), context.Web.Url, "n/a", "n/a", "Web", roleAsg.Member.PrincipalType, ProcessLoginName(roleAsg.Member.LoginName), "", "User/Group removed", Environment.NewLine);
                         System.IO.File.AppendAllText(removeUsersLogFilePath, txt, ASCIIEncoding.ASCII);
                     }
                 }
